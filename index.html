@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Лавандовая Ленка — пиксельный симулятор</title>
+    <style>
+        * {
+            user-select: none;
+            touch-action: manipulation;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(145deg, #d9c9ff 0%, #c2b0f0 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Courier New', 'VT323', 'Press Start 2P', monospace;
+            padding: 16px;
+        }
+
+        /* основной контейнер с нежной тенью */
+        .game-container {
+            max-width: 520px;
+            width: 100%;
+            background: #fef7ff;
+            border-radius: 48px 48px 36px 36px;
+            box-shadow: 0 20px 35px rgba(120, 80, 150, 0.25);
+            overflow: hidden;
+            backdrop-filter: blur(0px);
+            border: 1px solid rgba(255, 245, 255, 0.7);
+        }
+
+        /* пиксельный канвас с crisp edges */
+        .canvas-wrapper {
+            background: #ffeef8;
+            padding: 20px 20px 0 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        canvas {
+            image-rendering: crisp-edges;   
+            image-rendering: pixelated;
+            image-rendering: pixelated;         
+            width: 100%;
+            height: auto;
+            max-width: 300px;
+            border-radius: 28px;
+            box-shadow: 0 6px 0 #cfb5e6;
+            background: #fffafc;
+            display: block;
+            margin: 0 auto;
+        }
+
+        /* панель характеристик */
+        .stats-panel {
+            background: #f5eaff;
+            margin: 16px 20px;
+            border-radius: 32px;
+            padding: 14px 20px;
+            box-shadow: inset 0 1px 3px #fff9, 0 6px 12px rgba(0,0,0,0.05);
+        }
+
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            font-weight: bold;
+            text-shadow: 0 1px 0 white;
+        }
+
+        .stat:last-child {
+            margin-bottom: 0;
+        }
+
+        .stat-icon {
+            font-size: 24px;
+            min-width: 40px;
+            text-align: center;
+            filter: drop-shadow(0 1px 1px rgba(0,0,0,0.1));
+        }
+
+        .stat-bar-bg {
+            flex: 1;
+            height: 18px;
+            background-color: #e2d0f0;
+            border-radius: 40px;
+            overflow: hidden;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .stat-fill {
+            width: 80%;
+            height: 100%;
+            background: #b97fdb;
+            border-radius: 40px;
+            transition: width 0.2s ease;
+            box-shadow: inset 0 1px 0 rgba(255,255,200,0.5);
+        }
+
+        .stat-value {
+            min-width: 45px;
+            font-size: 1rem;
+            text-align: right;
+            color: #5c3e7c;
+            font-weight: bold;
+        }
+
+        /* кнопки-действия */
+        .action-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 14px;
+            padding: 8px 20px 28px 20px;
+        }
+
+        .pixel-btn {
+            background: #fbcee9;
+            border: none;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 1.2rem;
+            padding: 12px 18px;
+            border-radius: 60px;
+            color: #52367a;
+            box-shadow: 0 5px 0 #b18bcb;
+            transition: 0.07s linear;
+            cursor: pointer;
+            touch-action: manipulation;
+            flex: 1 0 auto;
+            min-width: 100px;
+            letter-spacing: 1px;
+            backdrop-filter: blur(2px);
+            background: #ffe0f0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .pixel-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 0 #b18bcb;
+        }
+
+        /* сообщения от игры */
+        .message-area {
+            background: #efe4ff;
+            margin: 6px 20px 24px 20px;
+            border-radius: 28px;
+            padding: 12px 16px;
+            text-align: center;
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: #5a3e7c;
+            min-height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: monospace;
+            box-shadow: inset 0 0 0 1px #ffffff80, 0 2px 6px rgba(0,0,0,0.05);
+        }
+
+        .quote {
+            background: #fff0fb;
+            border-radius: 20px;
+            padding: 6px 12px;
+            display: inline-block;
+        }
+
+        /* пиксельный акцент */
+        h2 {
+            text-align: center;
+            font-size: 1rem;
+            margin: 0;
+            padding: 16px 0 4px;
+            letter-spacing: 2px;
+            color: #735d9e;
+            font-weight: bold;
+        }
+
+        footer {
+            font-size: 0.7rem;
+            text-align: center;
+            color: #b59ad1;
+            padding: 6px 0 16px;
+        }
+
+        @media (max-width: 480px) {
+            .pixel-btn {
+                font-size: 1rem;
+                padding: 10px 12px;
+                min-width: 85px;
+            }
+            .stat-icon {
+                font-size: 20px;
+            }
+            .message-area {
+                font-size: 0.75rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="game-container">
+    <div class="canvas-wrapper">
+        <canvas id="pixelCanvas" width="300" height="300" style="width:100%; height:auto; max-width:300px; image-rendering: crisp-edges;"></canvas>
+    </div>
+    
+    <div class="stats-panel">
+        <div class="stat">
+            <span class="stat-icon">🍰</span>
+            <div class="stat-bar-bg"><div class="stat-fill" id="hungerFill" style="width: 80%"></div></div>
+            <span class="stat-value" id="hungerValue">80</span>
+        </div>
+        <div class="stat">
+            <span class="stat-icon">✨</span>
+            <div class="stat-bar-bg"><div class="stat-fill" id="energyFill" style="width: 80%"></div></div>
+            <span class="stat-value" id="energyValue">80</span>
+        </div>
+        <div class="stat">
+            <span class="stat-icon">🌸</span>
+            <div class="stat-bar-bg"><div class="stat-fill" id="happinessFill" style="width: 80%"></div></div>
+            <span class="stat-value" id="happinessValue">80</span>
+        </div>
+    </div>
+
+    <div class="action-buttons">
+        <button class="pixel-btn" id="feedBtn">🍓 Покормить</button>
+        <button class="pixel-btn" id="playBtn">🎈 Поиграть</button>
+        <button class="pixel-btn" id="restBtn">💤 Отдохнуть</button>
+    </div>
+
+    <div class="message-area" id="gameMessage">
+        🌸 Погладь Леночку! 🌸
+    </div>
+    <footer>✦ пиксельный друг ✦</footer>
+</div>
+
+<script>
+    (function(){
+        // ----- игровые параметры -----
+        let hunger = 80;      // сытость 0-100
+        let energy = 80;      // энергия
+        let happiness = 80;   // счастье
+        
+        // лимиты
+        const MAX_STAT = 100;
+        const MIN_STAT = 0;
+        
+        // эффект анимации моргания / настроения
+        let moodMessage = "";
+        let lastActionTime = 0;
+        
+        // ссылки на DOM
+        const canvas = document.getElementById('pixelCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // элементы полос и значений
+        const hungerFillEl = document.getElementById('hungerFill');
+        const hungerValueEl = document.getElementById('hungerValue');
+        const energyFillEl = document.getElementById('energyFill');
+        const energyValueEl = document.getElementById('energyValue');
+        const happinessFillEl = document.getElementById('happinessFill');
+        const happinessValueEl = document.getElementById('happinessValue');
+        const messageBox = document.getElementById('gameMessage');
+        
+        // ограничение частоты кликов (сек)
+        let canClick = true;
+        const CLICK_COOLDOWN = 550;
+        
+        // ---- вспомогательная функция обновления UI ----
+        function updateStatsUI() {
+            hungerFillEl.style.width = hunger + '%';
+            hungerValueEl.innerText = Math.floor(hunger);
+            energyFillEl.style.width = energy + '%';
+            energyValueEl.innerText = Math.floor(energy);
+            happinessFillEl.style.width = happiness + '%';
+            happinessValueEl.innerText = Math.floor(happiness);
+            
+            // меняем цвет полосок в зависимости от уровня (нежный градиент)
+            const getFillColor = (val) => {
+                if(val > 65) return '#b27bdb';
+                if(val > 30) return '#ce9cf0';
+                return '#efb0d0';
+            };
+            hungerFillEl.style.backgroundColor = getFillColor(hunger);
+            energyFillEl.style.backgroundColor = getFillColor(energy);
+            happinessFillEl.style.backgroundColor = getFillColor(happiness);
+        }
+        
+        // ---- генерация случайного милого сообщения ----
+        function setMessage(text, emoji = "💕") {
+            messageBox.innerHTML = `<span class="quote">${emoji} ${text} ${emoji}</span>`;
+            // автоматическое исчезновение через 2.5 сек, но оставляем последнее, пусть висит мягко
+            setTimeout(() => {
+                if(messageBox.innerText.includes(text)) {
+                    // если не перезаписали другим сообщением
+                    if(messageBox.innerText.includes(text))
+                        messageBox.innerHTML = `<span class="quote">🌸 Леночка ждёт твоей заботы 🌸</span>`;
+                }
+            }, 2800);
+        }
+        
+        // ---- учет изменения настроения и рисование персонажа (пиксельная графика + эмоции) ----
+        function getMoodBasedOnStats() {
+            if(hunger < 20) return "голодна";
+            if(energy < 20) return "устала";
+            if(happiness < 25) return "грустит";
+            if(hunger > 80 && energy > 70 && happiness > 75) return "счастлива";
+            return "спокойна";
+        }
+        
+        // пиксельное рисование девочки с каштановыми волосами и карими глазами
+        function drawPixelGirl(mood) {
+            ctx.clearRect(0, 0, 300, 300);
+            
+            // ----- фон нежные облака/точечки -----
+            ctx.fillStyle = "#fffafc";
+            ctx.fillRect(0, 0, 300, 300);
+            // пиксельные сердечки/звёздочки на фоне (декор)
+            ctx.fillStyle = "#f2d9ff";
+            for(let i=0;i<12;i++) {
+                ctx.fillRect(15 + i*27, 270, 2, 2);
+                ctx.fillRect(280 - i*19, 20, 2, 2);
+            }
+            
+            // ---- тело и платье (нежно-розовое, пиксельными блоками) ----
+            ctx.fillStyle = "#FFB7D2";   // пудрово-розовое платье
+            ctx.fillRect(125, 150, 50, 55);   // тело-туловище
+            ctx.fillRect(115, 175, 70, 30);   // юбочка шире
+            
+            // рукава/ручки
+            ctx.fillStyle = "#FFCFDF";
+            ctx.fillRect(108, 150, 20, 22);   // левая рука
+            ctx.fillRect(172, 150, 20, 22);   // правая рука
+            // рукава обводка
+            ctx.fillStyle = "#E5A1C2";
+            ctx.fillRect(108, 150, 18, 8);
+            ctx.fillRect(174, 150, 18, 8);
+            
+            // ножки (пиксельные)
+            ctx.fillStyle = "#C48C9E";
+            ctx.fillRect(132, 200, 10, 28);
+            ctx.fillRect(158, 200, 10, 28);
+            // туфельки
+            ctx.fillStyle = "#E3B0D2";
+            ctx.fillRect(128, 226, 16, 6);
+            ctx.fillRect(156, 226, 16, 6);
+            
+            // шея
+            ctx.fillStyle = "#FFE0C0";
+            ctx.fillRect(144, 137, 12, 14);
+            
+            // голова (круглая, но пиксельным овалом)
+            ctx.fillStyle = "#FFDFC2";
+            ctx.beginPath();
+            ctx.ellipse(150, 105, 28, 32, 0, 0, Math.PI*2);
+            ctx.fill();
+            ctx.fillStyle = "#FFD5B0";
+            ctx.beginPath();
+            ctx.ellipse(150, 108, 26, 29, 0, 0, Math.PI*2);
+            ctx.fill();
+            
+            // ---- волосы каштановые (тёмно-каштановый #6B3E26) ----
+            ctx.fillStyle = "#6B3E26";
+            // пышная причёска, челка и хвостики
+            ctx.fillRect(122, 78, 56, 22);
+            ctx.fillRect(120, 84, 60, 16);
+            ctx.fillRect(112, 92, 15, 12);
+            ctx.fillRect(173, 92, 15, 12);
+            ctx.fillRect(124, 74, 52, 10);
+            ctx.fillRect(130, 68, 40, 10);
+            // два милых пучка/хвостика
+            ctx.fillStyle = "#8B5A3C";
+            ctx.fillRect(108, 84, 14, 14);
+            ctx.fillRect(178, 84, 14, 14);
+            ctx.fillStyle = "#6B3E26";
+            ctx.fillRect(110, 88, 10, 12);
+            ctx.fillRect(180, 88, 10, 12);
+            
+            // пряди по бокам
+            ctx.fillRect(117, 97, 8, 15);
+            ctx.fillRect(175, 97, 8, 15);
+            
+            // ---- глаза карие (тёмно-карий + блик) ----
+            ctx.fillStyle = "#4A2A1A";   // насыщенный карий
+            ctx.fillRect(134, 102, 9, 11);
+            ctx.fillRect(157, 102, 9, 11);
+            ctx.fillStyle = "#1F1109";
+            ctx.fillRect(136, 105, 5, 6);
+            ctx.fillRect(159, 105, 5, 6);
+            // блики
+            ctx.fillStyle = "#FFF6E8";
+            ctx.fillRect(138, 103, 2, 2);
+            ctx.fillRect(161, 103, 2, 2);
+            
+            // реснички (милые пиксели)
+            ctx.fillStyle = "#4F2C19";
+            ctx.fillRect(130, 98, 3, 2);
+            ctx.fillRect(143, 98, 3, 2);
+            ctx.fillRect(154, 98, 3, 2);
+            ctx.fillRect(167, 98, 3, 2);
+            
+            // ротик и румянец
+            ctx.fillStyle = "#CC7B6E";
+            ctx.fillRect(147, 117, 6, 3);
+            // нежный румянец
+            ctx.fillStyle = "#FFAEBC";
+            ctx.fillRect(125, 113, 7, 4);
+            ctx.fillRect(168, 113, 7, 4);
+            
+            // ---- смена выражения лица в зависимости от настроения (пиксельная эмоция) ----
+            if(mood === "голодна") {
+                ctx.fillStyle = "#D997B0";
+                ctx.fillRect(147, 119, 6, 2);
+                ctx.fillStyle = "#FFFFFF";
+                ctx.fillRect(133, 114, 3, 2);
+                ctx.fillRect(164, 114, 3, 2);
+                // слезка маленькая
+                ctx.fillStyle = "#9BC4FF";
+                ctx.fillRect(168, 108, 2, 3);
+            } 
+            else if(mood === "устала") {
+                ctx.fillStyle = "#BF8E9A";
+                ctx.fillRect(146, 119, 8, 2);
+                ctx.fillStyle = "#FFF1CC";
+                ctx.fillRect(133, 112, 4, 2);
+                ctx.fillRect(163, 112, 4, 2);
+                ctx.fillStyle = "#D3A4C0";
+                ctx.fillRect(126, 105, 2, 3);
+                ctx.fillRect(172, 105, 2, 3);
+            }
+            else if(mood === "грустит") {
+                ctx.fillStyle = "#C98CAC";
+                ctx.fillRect(146, 119, 8, 2);
+                ctx.fillRect(132, 114, 3, 2);
+                ctx.fillRect(165, 114, 3, 2);
+                ctx.fillStyle = "#9EC4FF";
+                ctx.fillRect(129, 107, 2, 3);
+                ctx.fillRect(169, 107, 2, 3);
+            }
+            else if(mood === "счастлива") {
+                ctx.fillStyle = "#FF869B";
+                ctx.fillRect(145, 117, 10, 4);
+                ctx.fillStyle = "#FFB8D0";
+                ctx.fillRect(129, 111, 6, 3);
+                ctx.fillRect(165, 111, 6, 3);
+                ctx.fillStyle = "#FFE8B6";
+                ctx.fillRect(138, 93, 3, 3);
+                ctx.fillRect(159, 93, 3, 3);
+            }
+            else {
+                // спокойная, улыбка
+                ctx.fillStyle = "#D88EAA";
+                ctx.fillRect(146, 117, 8, 3);
+            }
+            
+            // бантик на платье (нежно-лавандовый)
+            ctx.fillStyle = "#CBA6F0";
+            ctx.fillRect(142, 155, 16, 8);
+            ctx.fillRect(137, 158, 26, 5);
+            ctx.fillStyle = "#E7C6FF";
+            ctx.fillRect(145, 152, 10, 5);
+            
+            // маленькие пиксельные цветочки на платье
+            ctx.fillStyle = "#F3CAE5";
+            ctx.fillRect(135, 168, 3, 3);
+            ctx.fillRect(162, 166, 3, 3);
+            ctx.fillStyle = "#C7ADE6";
+            ctx.fillRect(149, 172, 3, 3);
+            
+            // рисуем искорки, если счастье высокое
+            if(happiness > 75) {
+                ctx.fillStyle = "#FFE6A3";
+                ctx.fillRect(108, 48, 2, 2);
+                ctx.fillRect(192, 58, 2, 2);
+                ctx.fillRect(76, 93, 2, 2);
+                ctx.fillRect(224, 87, 2, 2);
+                ctx.fillStyle = "#FBCBFF";
+                ctx.fillRect(95, 63, 2, 2);
+                ctx.fillRect(205, 44, 2, 2);
+            }
+        }
+        
+        // перерисовка всего (статы + графика + сообщение)
+        function refreshGameVisuals() {
+            const currentMood = getMoodBasedOnStats();
+            drawPixelGirl(currentMood);
+            updateStatsUI();
+            
+            // дополнительно выводим в сообщение, если параметры критичны
+            if(hunger <= 15) {
+                if(!messageBox.innerText.includes("проголодалась")) 
+                    setMessage("Леночка хочет кушать! 🍜", "🍰");
+            } else if(energy <= 15) {
+                if(!messageBox.innerText.includes("устала")) 
+                    setMessage("Ей нужно отдохнуть... 💤", "🌙");
+            } else if(happiness <= 20) {
+                if(!messageBox.innerText.includes("грустно")) 
+                    setMessage("Обними Лену! Она загрустила... 🥺", "🌸");
+            }
+        }
+        
+        // ---- изменение характеристик с проверками ----
+        function changeStat(statName, delta) {
+            let newVal;
+            if(statName === 'hunger') {
+                newVal = Math.min(MAX_STAT, Math.max(MIN_STAT, hunger + delta));
+                hunger = newVal;
+            } else if(statName === 'energy') {
+                newVal = Math.min(MAX_STAT, Math.max(MIN_STAT, energy + delta));
+                energy = newVal;
+            } else if(statName === 'happiness') {
+                newVal = Math.min(MAX_STAT, Math.max(MIN_STAT, happiness + delta));
+                happiness = newVal;
+            }
+            refreshGameVisuals();
+            
+            // проверка на достижение 100 (восторг)
+            if(hunger === 100 || energy === 100 || happiness === 100) {
+                if(!messageBox.innerText.includes("сияет")) 
+                    setMessage("Леночка сияет от счастья! ✨", "🌟");
+            }
+            if(hunger === 0 || energy === 0 || happiness === 0){
+                setMessage("Пожалуйста, позаботься о девочке! 💔", "🕊️");
+            }
+        }
+        
+        // ---- действия игрока -----
+        function actionFeed() {
+            if(!canClick) return;
+            canClick = false;
+            // покормить: + сытость, +немного счастья, - если переедание?
+            let hungerDelta = 18;
+            let happinessDelta = 6;
+            let energyDelta = -2;   // чуть устает после еды?
+            if(hunger > 85) hungerDelta = 5;
+            changeStat('hunger', hungerDelta);
+            changeStat('happiness', happinessDelta);
+            changeStat('energy', energyDelta);
+            setMessage("Вкусняшка! Спасибо! 🍓🥛", "🍰");
+            // анимация моргания? отрисовка и так обновится
+            setTimeout(() => { canClick = true; }, CLICK_COOLDOWN);
+        }
+        
+        function actionPlay() {
+            if(!canClick) return;
+            canClick = false;
+            let happinessDelta = 16;
+            let energyDelta = -12;
+            let hungerDelta = -5;   // во время игры проголодалась
+            if(energy < 15) {
+                setMessage("Слишком уставшая для игр... поспи немного 😴", "💤");
+                setTimeout(() => { canClick = true; }, CLICK_COOLDOWN);
+                return;
+            }
+            changeStat('happiness', happinessDelta);
+            changeStat('energy', energyDelta);
+            changeStat('hunger', hungerDelta);
+            setMessage("Леночка веселится с бабочками! 🦋🎶", "🎈");
+            setTimeout(() => { canClick = true; }, CLICK_COOLDOWN);
+        }
+        
+        function actionRest() {
+            if(!canClick) return;
+            canClick = false;
+            let energyDelta = 20;
+            let hungerDelta = -4;
+            let happinessDelta = 5;
+            if(energy > 88) energyDelta = 6;
+            changeStat('energy', energyDelta);
+            changeStat('hunger', hungerDelta);
+            changeStat('happiness', happinessDelta);
+            setMessage("Сладких снов! 🌙💜", "☁️");
+            setTimeout(() => { canClick = true; }, CLICK_COOLDOWN);
+        }
+        
+        // ---- авто-постепенное снижение параметров (лёгкий симулятор) каждые 22 секунды -----
+        let decayInterval;
+        function startDecay() {
+            if(decayInterval) clearInterval(decayInterval);
+            decayInterval = setInterval(() => {
+                // небольшой естественный откат: голод + усталость + чуть скуки
+                let hungryDrop = -2;
+                let energyDrop = -1;
+                let happyDrop = -1;
+                if(hunger < 20) happyDrop -= 1;
+                if(energy < 20) happyDrop -= 1;
+                changeStat('hunger', hungryDrop);
+                changeStat('energy', energyDrop);
+                changeStat('happiness', happyDrop);
+                // если всё в порядке, случайная приятная мелочь
+                if(hunger > 50 && energy > 50 && happiness > 50 && Math.random()<0.3) {
+                    // иногда само-настроение улучшается
+                    if(happiness<95) changeStat('happiness', 2);
+                }
+                // лёгкое напоминание если параметры низкие
+                if(hunger < 30 && (Date.now() % 3 === 0)) {
+                    setMessage("Леночка немного голодна... 🥺", "🍎");
+                } else if(energy < 25) {
+                    setMessage("Зевает... Пора отдыхать? 💤", "🌙");
+                }
+            }, 21000);
+        }
+        
+        // ---- инициализация и кнопки ----
+        function bindEvents() {
+            document.getElementById('feedBtn').addEventListener('click', actionFeed);
+            document.getElementById('playBtn').addEventListener('click', actionPlay);
+            document.getElementById('restBtn').addEventListener('click', actionRest);
+            // для тач-устройств без задержки
+            const btns = document.querySelectorAll('.pixel-btn');
+            btns.forEach(btn => {
+                btn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    btn.click();
+                });
+            });
+        }
+        
+        // сброс при загрузке, старт
+        function init() {
+            hunger = 75;
+            energy = 78;
+            happiness = 82;
+            updateStatsUI();
+            refreshGameVisuals();
+            bindEvents();
+            startDecay();
+            setMessage("Привет! Я Леночка, поиграем? ✨", "🌸");
+        }
+        
+        init();
+    })();
+</script>
+</body>
+</html>
